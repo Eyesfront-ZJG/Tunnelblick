@@ -32,7 +32,6 @@
 #import "MenuController.h"
 #import "NSFileManager+TB.h"
 #import "NSTimer+TB.h"
-#import "Sparkle/SUUpdater.h"
 #import "TBUserDefaults.h"
 
 extern NSFileManager  * gFileMgr;
@@ -42,7 +41,6 @@ extern TBUserDefaults * gTbDefaults;
 
 @implementation ConfigurationUpdater
 
-TBSYNTHESIZE_OBJECT_GET(retain, SUUpdater *, cfgUpdater)
 TBSYNTHESIZE_OBJECT_GET(retain, NSString  *, cfgBundlePath)
 TBSYNTHESIZE_OBJECT_GET(retain, NSString  *, cfgBundleId)
 TBSYNTHESIZE_OBJECT_GET(retain, NSString  *, cfgName)
@@ -115,18 +113,6 @@ TBSYNTHESIZE_OBJECT(    retain, NSString *,  feedUrlStringForConfigurationUpdate
         cfgBundleId   = [bundleId retain];
         cfgName       = [[path lastPathComponent] retain];
         
-        cfgUpdater    = [[SUUpdater updaterForBundle: [NSBundle bundleWithPath: path]] retain];
-        if (  cfgUpdater  ) {
-            [cfgUpdater setAutomaticallyChecksForUpdates: NO];      // Don't start checking yet
-            [cfgUpdater setAutomaticallyDownloadsUpdates: NO];      // MUST BE 'NO' because "Install" on Quit doesn't work properly
-            [cfgUpdater setSendsSystemProfile:            NO];      // See https://answers.edge.launchpad.net/sparkle/+question/88790
-            [cfgUpdater setUpdateCheckInterval:           interval];
-            [cfgUpdater setDelegate:                      (id)self];
-            [cfgUpdater setFeedURL:                       feedURL];
-        } else {
-            NSLog(@"Unable to create an updater for %@", path);
-        }
-        
         return self;
     }
 
@@ -138,207 +124,18 @@ TBSYNTHESIZE_OBJECT(    retain, NSString *,  feedUrlStringForConfigurationUpdate
 	[cfgBundlePath release]; cfgBundlePath = nil;
 	[cfgBundleId   release]; cfgBundleId   = nil;
 	[cfgName       release]; cfgName       = nil;
-	[cfgUpdater    release]; cfgUpdater    = nil;
     
     [super dealloc];
-}
-
--(void) startUpdateCheckingWithUI {
-	
-	if (  [gTbDefaults boolForKey: @"inhibitOutboundTunneblickTraffic"]) {
-		return;
-	}
-	
-	[[self cfgUpdater] resetUpdateCycle];
-	[[self cfgUpdater] checkForUpdates: self];
-	
-	TBLog(@"DB-UC", @"Started update check with UI for configuration '%@' (%@); URL = %@", [self cfgBundleId], [self edition], [cfgUpdater feedURL]);
-}
-
--(void) startCheckingWithoutUI {
-	
-	if (  [gTbDefaults boolForKey: @"inhibitOutboundTunneblickTraffic"]) {
-		return;
-	}
-	
-	NSString * action = (  [[self cfgUpdater] automaticallyChecksForUpdates]
-						 ? @"Restarted"
-						 : @"Started");
-	
-	[[self cfgUpdater] resetUpdateCycle];
-	[[self cfgUpdater] checkForUpdatesInBackground];
-	
-	TBLog(@"DB-UC", @"%@ update checks without UI for configuration '%@' (%@); URL = %@", action, [self cfgBundleId], [self edition], [cfgUpdater feedURL]);
-}
-
--(void) startUpdateCheckingWithUIThread: (NSNumber *) withUINumber {
-    
-    // Invoked in a new thread. Waits until the app isn't being updated, then schedules itself to start checking on the main thread, then exits the thread.
-    // [withUINumber boolValue] should be TRUE to present the UI, FALSE to check in the background
-
-    NSAutoreleasePool * threadPool = [NSAutoreleasePool new];
-    
-    if (  ! [withUINumber respondsToSelector: @selector(boolValue)]  ) {
-        NSLog(@"startUpdateCheckingWithUIThread: invalid argument '%@' (a '%@' does not respond to 'boolValue')", withUINumber, [withUINumber className]);
-		[threadPool drain];
-        return;
-    }
-    
-    BOOL withUI = [withUINumber boolValue];
-    
-    // Wait until the application is not being updated
-    SUUpdater * appUpdater = [gMC updater];
-    while (  [appUpdater updateInProgress]  ) {
-        
-		if (  [gTbDefaults boolForKey: @"inhibitOutboundTunneblickTraffic"]) {
-			[threadPool drain];
-			return;
-		}
-        TBLog(@"DB-UC", @"Delaying start of update checks for configuration '%@' (%@)", [self cfgBundleId], [self edition]);
-        sleep(1);
-        
-    }
-    
-    if (  withUI  ) {
-		[self performSelectorOnMainThread: @selector(startUpdateCheckingWithUI) withObject: nil waitUntilDone: NO];
-    } else {
-		[self performSelectorOnMainThread: @selector(startCheckingWithoutUI)    withObject: nil waitUntilDone: NO];
-    }
-    
-    [threadPool drain];
-}
-
--(void) startUpdateCheckingWithUI: (NSNumber *) withUI {
-	
-	if (  ! [gTbDefaults boolForKey: @"inhibitOutboundTunneblickTraffic"]) {
-        [NSThread detachNewThreadSelector: @selector(startUpdateCheckingWithUIThread:) toTarget: self withObject: withUI];
-    }
-}
-
--(void) stopChecking {
-    
-	if (  [[self cfgUpdater] automaticallyChecksForUpdates]  ) {
-		[[self cfgUpdater] setAutomaticallyChecksForUpdates: NO];
-		TBLog(@"DB-UC", @"Stopped update checks for configuration '%@' (%@)", [self cfgBundleId], [self edition]);
-	} else {
-		TBLog(@"DB-UC", @"Update checks are already stopped for configuration '%@' (%@)", [self cfgBundleId], [self edition]);
-	}
-
-}
-
-//************************************************************************************************************
-// SUUpdater delegate methods
-
-- (BOOL)updaterShouldPromptForPermissionToCheckForUpdates:(SUUpdater *)bundle {
-    
-	// Use this to override the default behavior for Sparkle prompting the user about automatic update checks.
-    
-    (void) bundle;
-	
-    TBLog(@"DB-UC", @"updaterShouldPromptForPermissionToCheckForUpdates for '%@' (%@ %@)", [self cfgName], [self cfgBundleId], [self edition]);
-    return NO;
-}
-
-- (NSString *)feedURLStringForUpdater:(SUUpdater *)updater {
-	
-	(void)updater;
-	
-	return [self feedUrlStringForConfigurationUpdater];
-}
-
-
-- (BOOL)updaterShouldRelaunchApplication:(SUUpdater *)updater {
-	
-    (void) updater;
-	
-    TBLog(@"DB-UC", @"updaterShouldRelaunchApplication for '%@' (%@ %@)", [self cfgName], [self cfgBundleId], [self edition]);
-	
-    if (  gShuttingDownWorkspace  ) {
-        return NO;
-    }
-    
-    if (  ! [gMC launchFinished]  ) {
-        if (  [NSThread isMainThread]  ) {
-            NSLog(@"updaterShouldRelaunchApplication: launchFinished = FALSE but are on the main thread, so not waiting for launchFinished");
-        } else {
-            // We are not on the main thread, so we make sure that Tunneblick has finished launching and the main thread is ready before we proceed to update the configuration.
-            while (  [gMC launchFinished]  ) {
-                sleep(1);
-            }
-        }
-    }
-    
-	[gMC performSelectorOnMainThread: @selector(installConfigurationsUpdateInBundleAtPathMainThread:) withObject: [self cfgBundlePath] waitUntilDone: NO];
-	return NO;
 }
 
 //
 // None of the rest of the delegate methods are used but they show the progress of the update checks
 //
-
--(void)         updater: (SUUpdater *) updater
-didFinishLoadingAppcast: (SUAppcast *) appcast {
-    
-    // Implement this if you want to do some special handling with the appcast once it finishes loading.
-    
-    (void) updater;
-    (void) appcast;
-    
-    TBLog(@"DB-UC", @"didFinishLoadingAppcast for '%@' (%@ %@)", [self cfgName], [self cfgBundleId], [self edition]);
-}
-
--(void)    updater: (SUUpdater *)    updater
-didFindValidUpdate:(SUAppcastItem *) update {
-    
-    // Sent when a valid update is found by the update driver.
-    
-    (void) updater;
-    (void) update;
-    
-    TBLog(@"DB-UC", @"didFindValidUpdate for '%@' (%@ %@)", [self cfgName], [self cfgBundleId], [self edition]);
-}
-
--(void) updaterDidNotFindUpdate: (SUUpdater *) update {
-    
-    // Sent when a valid update is not found.
-    
-    (void) update;
-    
-    TBLog(@"DB-UC", @"updaterDidNotFindUpdate for '%@' (%@ %@)", [self cfgName], [self cfgBundleId], [self edition]);
-}
-
-- (void)updater:(SUUpdater *)updater willInstallUpdate:(SUAppcastItem *)update {
-    
-	(void) updater;
-    (void) update;
-	
-    TBLog(@"DB-UC", @"willInstallUpdate for '%@' (%@ %@)", [self cfgName], [self cfgBundleId], [self edition]);
-}
-
 - (void)installerFinishedForHost:(id)host {
 	
 	(void) host;
 	
     TBLog(@"DB-UC", @"installerFinishedForHost for '%@' (%@ %@)", [self cfgName], [self cfgBundleId], [self edition]);
-}
-
-- (NSString *)pathToRelaunchForUpdater:(SUUpdater *)updater {
-    
-    // Returns the path which is used to relaunch the client after the update is installed. By default, the path of the host bundle.
-    
-	(void) updater;
-	
-    TBLog(@"DB-UC", @"pathToRelaunchForUpdater for '%@' (%@ %@)", [self cfgName], [self cfgBundleId], [self edition]);
-	return nil;
-}
-
-- (void) updaterWillRelaunchApplication: (SUUpdater *) updater {
-    
-    // Called immediately before relaunching.
-    
-    (void) updater;
-    
-    TBLog(@"DB-UC", @"updaterWillRelaunchApplication for '%@' (%@ %@)", [self cfgName], [self cfgBundleId], [self edition]);
 }
 
 @end

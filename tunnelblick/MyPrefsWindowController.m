@@ -41,7 +41,6 @@
 #import "NSFileManager+TB.h"
 #import "NSString+TB.h"
 #import "SettingsSheetWindowController.h"
-#import "Sparkle/SUUpdater.h"
 #import "SystemAuth.h"
 #import "TBButton.h"
 #import "TBOperationQueue.h"
@@ -2933,15 +2932,6 @@ static BOOL firstTimeShowingWindow = TRUE;
 {
 	[gTbDefaults setBool: [sender state] forKey: @"inhibitOutboundTunneblickTraffic"];
 	
-	[self setupUpdatesCheckboxes];
-	[self setupCheckIPAddress: nil];
-	
-    SUUpdater * updater = [gMC updater];
-    if (  [updater respondsToSelector: @selector(setAutomaticallyChecksForUpdates:)]  ) {
- 		[gMC setupUpdaterAutomaticChecks];
-    } else {
-        NSLog(@"'Inhibit automatic update checking and IP address checking' change ignored because the updater does not respond to setAutomaticallyChecksForUpdates:");
-	}
 }
 
 
@@ -3025,34 +3015,6 @@ static BOOL firstTimeShowingWindow = TRUE;
     // To undo that afterwards, we delay changing the value for 0.2 seconds.
     [self performSelector: @selector(setupUpdatesAdminApprovalForKeyAndCertificateChangesCheckbox) withObject: nil afterDelay: 0.2];
 }
-
-
--(IBAction) updatesCheckAutomaticallyCheckboxWasClicked: (NSButton *) sender
-{
-    SUUpdater * updater = [gMC updater];
-    if (  [updater respondsToSelector: @selector(setAutomaticallyChecksForUpdates:)]  ) {
-        [gTbDefaults setBool: [sender state] forKey: @"updateCheckAutomatically"];
-		[gMC setupUpdaterAutomaticChecks];
-    } else {
-        NSLog(@"'Automatically Check for Updates' change ignored because the updater does not respond to setAutomaticallyChecksForUpdates:");
-    }
-}
-
-
--(IBAction) updatesCheckForBetaUpdatesCheckboxWasClicked: (NSButton *) sender
-{
-    [gTbDefaults setBool: [sender state] forKey: @"updateCheckBetas"];
-}
-
-
--(IBAction) updatesCheckNowButtonWasClicked: (id) sender
-{
-	(void) sender;
-	
-    [gMC checkForUpdates: self];
-    [self updateLastCheckedDate];
-}
-
 
 -(IBAction) resetDisabledWarningsButtonWasClicked: (id) sender
 {

@@ -21,12 +21,10 @@
 
 #import "defines.h"
 
-@class SUUpdater;
 
 @interface ConfigurationUpdater : NSObject {
     
     NSString  * cfgBundlePath;
-    SUUpdater * cfgUpdater;
     NSString  * cfgBundleId;
     NSString  * cfgName;
 	NSString  * feedUrlStringForConfigurationUpdater;

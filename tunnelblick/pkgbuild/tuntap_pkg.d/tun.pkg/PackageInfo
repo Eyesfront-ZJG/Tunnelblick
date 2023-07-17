@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<pkg-info overwrite-permissions="true" relocatable="false" identifier="net.tunnelblick.tuntappkg" postinstall-action="none" version="0" format-version="2" generator-version="InstallCmds-830.1 (22F82)" auth="root">
+    <payload numberOfFiles="13" installKBytes="189"/>
+    <bundle path="./Library/Extensions/tun.kext" id="net.tunnelblick.tun" CFBundleShortVersionString="20141104 (Tunnelblick tun kext version 5.0; Tunnelblick build 5622)" CFBundleVersion="5.0"/>
+    <bundle-version>
+        <bundle id="net.tunnelblick.tun"/>
+    </bundle-version>
+    <upgrade-bundle>
+        <bundle id="net.tunnelblick.tun"/>
+    </upgrade-bundle>
+    <update-bundle/>
+    <atomic-update-bundle/>
+    <strict-identifier/>
+    <relocate/>
+    <scripts>
+        <postinstall file="./postinstall"/>
+    </scripts>
+</pkg-info>

@@ -111,8 +111,6 @@
 		63793423272D6B8200179B8F /* bn.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 63793422272D6B8100179B8F /* bn.lproj */; };
 		637A871913B74B81003C1871 /* SplashWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = 637A871813B74B81003C1871 /* SplashWindowController.m */; };
 		637A871C13B74DFB003C1871 /* SplashWindow.xib in Resources */ = {isa = PBXBuildFile; fileRef = 637A871B13B74DFB003C1871 /* SplashWindow.xib */; };
-		637B0A1E1A81DC2100210900 /* Sparkle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 637B0A1D1A81DC2100210900 /* Sparkle.framework */; };
-		637B0A281A81DC3500210900 /* Sparkle.framework in Copy Sparkle */ = {isa = PBXBuildFile; fileRef = 637B0A1D1A81DC2100210900 /* Sparkle.framework */; };
 		638164DE1C145CC100B59958 /* reactivate-tunnelblick.sh in Resources */ = {isa = PBXBuildFile; fileRef = 638164DD1C145CC100B59958 /* reactivate-tunnelblick.sh */; };
 		638222211E287C0500A2BD87 /* updates_create_signature in Resources */ = {isa = PBXBuildFile; fileRef = 638222201E287C0500A2BD87 /* updates_create_signature */; };
 		638613271492C88B00C3DCCE /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 638A2004135CC41C00FB932C /* Foundation.framework */; };
@@ -351,7 +349,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				637B0A281A81DC3500210900 /* Sparkle.framework in Copy Sparkle */,
 			);
 			name = "Copy Sparkle";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -496,7 +493,6 @@
 		637A871713B74B81003C1871 /* SplashWindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SplashWindowController.h; sourceTree = "<group>"; };
 		637A871813B74B81003C1871 /* SplashWindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SplashWindowController.m; sourceTree = "<group>"; };
 		637A871B13B74DFB003C1871 /* SplashWindow.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = SplashWindow.xib; sourceTree = "<group>"; };
-		637B0A1D1A81DC2100210900 /* Sparkle.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Sparkle.framework; path = ../third_party/products/sparkle/Sparkle.framework; sourceTree = SOURCE_ROOT; };
 		638164DD1C145CC100B59958 /* reactivate-tunnelblick.sh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.sh; path = "reactivate-tunnelblick.sh"; sourceTree = "<group>"; };
 		638222201E287C0500A2BD87 /* updates_create_signature */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.sh; path = updates_create_signature; sourceTree = "<group>"; };
 		6387F0F4135604240021E41B /* tunnelblick.sdef */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.sdef; path = tunnelblick.sdef; sourceTree = "<group>"; };
@@ -769,7 +765,6 @@
 				635CA9A012F9DCE300287298 /* AppKit.framework in Frameworks */,
 				63B9CFA5132C73DD009EC6D0 /* WebKit.framework in Frameworks */,
 				63432573140D7F5A00015CE0 /* CoreServices.framework in Frameworks */,
-				637B0A1E1A81DC2100210900 /* Sparkle.framework in Frameworks */,
 				63AE127F25C239500008379F /* Security.framework in Frameworks */,
 				634616871A9B85C60049C16C /* SystemConfiguration.framework in Frameworks */,
 			);
@@ -816,7 +811,6 @@
 				29B97324FDCFA39411CA2CEA /* AppKit.framework */,
 				13E42FB307B3F0F600E4EEF1 /* CoreData.framework */,
 				29B97325FDCFA39411CA2CEA /* Foundation.framework */,
-				637B0A1D1A81DC2100210900 /* Sparkle.framework */,
 			);
 			name = "Other Frameworks";
 			sourceTree = "<group>";

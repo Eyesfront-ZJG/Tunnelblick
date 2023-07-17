@@ -39,7 +39,6 @@
 #import "ConfigurationManager.h"
 #import "ConfigurationMultiUpdater.h"
 #import "ConfigurationsView.h"
-#import "ConfigurationUpdater.h"
 #import "LeftNavItem.h"
 #import "LeftNavViewController.h"
 #import "MainIconView.h"
@@ -50,7 +49,6 @@
 #import "NSString+TB.h"
 #import "NSTimer+TB.h"
 #import "SetupImporter.h"
-#import "Sparkle/SUUpdater.h"
 #import "SplashWindowController.h"
 #import "SystemAuth.h"
 #import "TBUIUpdater.h"
@@ -187,7 +185,6 @@ TBSYNTHESIZE_NONOBJECT(BOOL         , showingImportSetupWindow, setShowingImport
 
 TBSYNTHESIZE_OBJECT_GET(retain, MyPrefsWindowController *,   logScreen)
 TBSYNTHESIZE_OBJECT_GET(retain, NSString *,                  customRunOnConnectPath)
-TBSYNTHESIZE_OBJECT_GET(retain, SUUpdater *,                 updater)
 TBSYNTHESIZE_OBJECT_GET(retain, NSMutableArray *,            largeAnimImages)
 TBSYNTHESIZE_OBJECT_GET(retain, NSImage *,                   largeConnectedImage)
 TBSYNTHESIZE_OBJECT_GET(retain, NSImage *,                   largeMainImage)
@@ -1276,7 +1273,6 @@ TBSYNTHESIZE_OBJECT(retain, NSString     *, tunnelblickVersionString,  setTunnel
     [hookupWatchdogTimer invalidate];
     [hookupWatchdogTimer release];
     [theAnim release];
-    [updater release];
     [myConfigMultiUpdater release];
     [customMenuScripts release];
     [customRunOnLaunchPath release];
@@ -2429,22 +2425,6 @@ static pthread_mutex_t myVPNMenuMutex = PTHREAD_MUTEX_INITIALIZER;
 	}
 }
 
-// Sparkle delegates:
-- (NSString *)feedURLStringForUpdater:(SUUpdater *) theUpdater {
-	
-	// This delegate method is implemented so Sparkle always uses the correct URL:
-	//		* If we are running a beta version of Tunnelblick, we must check for a beta update.
-	//		* Otherwise, we check for a beta update only if the user has requested it.
-	
-	(void) theUpdater;
-	
-	NSString * s = [self feedURLToUse];
-	if (  ! s  ) {
-		NSLog(@"MenuController: feedURL has not been set up; stack trace: %@", callStack());
-	}
-	return s;
-}
-
 -(NSString *) feedURLToUse {
 	
 	NSString * urlString = nil;
@@ -2512,43 +2492,6 @@ static pthread_mutex_t myVPNMenuMutex = PTHREAD_MUTEX_INITIALIZER;
 	TBLog(@"DB-ALL", "Application update feed = %@", urlString);
 	
 	return urlString;
-}
-
-- (BOOL)updaterShouldPromptForPermissionToCheckForUpdates:(SUAppcastItem *) theUpdater {
-	
-	// We never want Sparkle to ask for permission to check for updates.
-	// Tunnelblick asks for permission to check for updates when it asks for agreement to the use terms.
-	
-	(void) theUpdater;
-	
-	return NO;
-}
-
-- (void)updater:(SUUpdater *)theUpdater willInstallUpdate:(SUAppcastItem *)update
-{
-	(void) theUpdater;
-	(void) update;
-	
-	[gTbDefaults removeObjectForKey: @"skipWarningAboutInvalidSignature"];
-	[gTbDefaults removeObjectForKey: @"skipWarningAboutNoSignature"];
-	[gTbDefaults setBool: TRUE forKey: @"haveStartedAnUpdateOfTheApp"];
-	
-	reasonForTermination = terminatingBecauseOfUpdate;
-	
-	[gTbDefaults setBool: NO forKey: @"launchAtNextLogin"];
-	terminatingAtUserRequest = TRUE;
-	
-	NSLog(@"updater:willInstallUpdate: Starting cleanup.");
-	if (  [self cleanup]  ) {
-		NSLog(@"updater:willInstallUpdate: Cleanup finished.");
-	} else {
-		NSLog(@"updater:willInstallUpdate: Cleanup already being done.");
-	}
-	
-	// DO NOT UNLOCK cleanupMutex --
-	// We do not want to execute cleanup a second time, because:
-	//     (1) We've already just run it and thus cleaned up everything, and
-	//     (2) The newly-installed openvpnstart won't be secured and thus will fail
 }
 
 -(void) recreateMainMenuClearCache: (BOOL) clearCache
@@ -3082,39 +3025,6 @@ static pthread_mutex_t configModifyMutex = PTHREAD_MUTEX_INITIALIZER;
 	}
 
 	return [[openVPNLogHeader retain] autorelease];
-}
-
-- (void) checkForUpdates: (id) sender
-{
-	(void) sender;
-	
-    if (   [gTbDefaults boolForKey:@"onlyAdminCanUpdate"]
-        && ( ! userIsAnAdmin )  ) {
-        NSLog(@"Check for updates was not performed because user is not allowed to administer this computer and 'onlyAdminCanUpdate' preference is set");
-    } else {
-		if (  [updater respondsToSelector: @selector(checkForUpdates:)]  ) {
-			if (  ! userIsAnAdmin  ) {
-				int response = TBRunAlertPanelExtended(NSLocalizedString(@"Only computer administrators should update Tunnelblick", @"Window title"),
-													   NSLocalizedString(@"You will not be able to update Tunnelblick unless you provide a computer administrator's authorization.\n\nAre you sure you wish to check for updates?", @"Window text"),
-													   NSLocalizedString(@"Check For Updates Now", @"Button"),  // Default button
-													   NSLocalizedString(@"Cancel", @"Button"),                 // Alternate button
-													   nil,                                                     // Other button
-													   @"skipWarningAboutNonAdminUpdatingTunnelblick",          // Preference about seeing this message again
-													   NSLocalizedString(@"Do not warn about this again", @"Checkbox name"),
-													   nil,
-													   NSAlertDefaultReturn);
-				if (  response != NSAlertDefaultReturn  ) {   // No action if cancelled or error occurred
-					return;
-				}
-			}
-			
-			[updater checkForUpdates: self];
-        } else {
-            NSLog(@"Check for updates was not performed because Sparkle Updater does not respond to checkForUpdates:");
-        }
-        
-        [myConfigMultiUpdater startAllUpdateCheckingWithUI: YES]; // Display the UI
-    }
 }
 
 //*********************************************************************************************************
@@ -4279,39 +4189,6 @@ static void signal_handler(int signalNumber)
 	return ( [importer import] );
 }
 
--(void) setupUpdaterAutomaticChecks {
-    
-    if (  [updater respondsToSelector: @selector(setAutomaticallyChecksForUpdates:)]  ) {
-        if (  [gTbDefaults boolForKey: @"inhibitOutboundTunneblickTraffic"]  ) {
-            [updater setAutomaticallyChecksForUpdates: NO];
-			[myConfigMultiUpdater stopAllUpdateChecking];
-        } else {
-            BOOL userIsAdminOrNonAdminsCanUpdate = (   userIsAnAdmin
-                                                    || ( ! [gTbDefaults boolForKey:@"onlyAdminCanUpdate"])  );
-			if (  userIsAdminOrNonAdminsCanUpdate  ) {
-				if (  [gTbDefaults preferenceExistsForKey: @"updateCheckAutomatically"]  ) {
-					BOOL startChecking = [gTbDefaults boolForKey: @"updateCheckAutomatically"];
-					[updater setAutomaticallyChecksForUpdates: startChecking];
-					if (  startChecking) {
-						[myConfigMultiUpdater startAllUpdateCheckingWithUI: NO];
-					} else {
-						[myConfigMultiUpdater stopAllUpdateChecking];
-					}
-				}
-			} else {
-				if (  [gTbDefaults boolForKey: @"updateCheckAutomatically"]  ) {
-					NSLog(@"Automatic check for updates will not be performed because user is not allowed to administer this computer and 'onlyAdminCanUpdate' preference is set");
-				}
-				[updater setAutomaticallyChecksForUpdates: NO];
-			}
-		}
-    } else {
-        if (  [gTbDefaults preferenceExistsForKey: @"updateCheckAutomatically"]  ) {
-            NSLog(@"Automatic checks for updates will not be performed because the updater does not respond to setAutomaticallyChecksForUpdates:");
-        }
-	}
-}
-
 - (void) applicationWillFinishLaunching: (NSNotification *)notification
 {
 	(void) notification;
@@ -4375,27 +4252,6 @@ static void signal_handler(int signalNumber)
 	[[NSUserDefaults standardUserDefaults] setBool: TRUE forKey: @"SUHasLaunchedBefore"];
 	
 	// Create and initialize the Sparkle Updater instance that updates the application:
-	updater = [[SUUpdater alloc] init];
-	
-	if (  [updater respondsToSelector: @selector(setDelegate:)]  ) {
-		[updater setDelegate: (id)self];
-	} else {
-		NSLog(@"Cannot set Sparkle delegate because Sparkle Updater does not respond to setDelegate:");
-	}
-
-    if (  [updater respondsToSelector: @selector(setUpdateCheckInterval:)]  ) {
-        NSTimeInterval checkInterval = [gTbDefaults timeIntervalForKey: @"updateCheckInterval"
-                                                               default: 60.0 * 60.0 * 24.0          // Default = 24 hours
-                                                                   min: 60.0 * 60.0                 // Minumum = 1 hour to prevent DOS on the update server
-                                                                   max: 60.0 * 60.0 * 24.0 * 7];    // Maximum = 1 week
-        [updater setUpdateCheckInterval: checkInterval];
-    } else {
-        if (  [gTbDefaults preferenceExistsForKey: @"updateCheckInterval"]  ) {
-            NSLog(@"Ignoring 'updateCheckInterval' preference because Sparkle Updater Updater does not respond to setUpdateCheckInterval:");
-        }
-    }
-    
-    [self setupUpdaterAutomaticChecks];
 	
     TBLog(@"DB-SU", @"applicationWillFinishLaunching: 002 -- LAST")
 }
@@ -5281,24 +5137,6 @@ static void signal_handler(int signalNumber)
         NSLog(@"Removed the UUID for this user's installation of Tunnelblick. Tunnelblick no longer uses or transmits UUIDs.");
     }
     
-    TBLog(@"DB-SU", @"applicationDidFinishLaunching: 002")
-    // If checking for updates is enabled, we do a check every time Tunnelblick is launched (i.e., now)
-    if (   [gTbDefaults boolWithDefaultYesForKey: @"updateCheckAutomatically"]  ) {
-        if (  [updater respondsToSelector: @selector(checkForUpdatesInBackground)]  ) {
-            if (  [self feedURLToUse]  ) {
-				if (  ! [gTbDefaults boolForKey: @"inhibitOutboundTunneblickTraffic"]  ) {
-					[updater checkForUpdatesInBackground];
-				} else {
-					NSLog(@"Not checking for updates because inhibitOutboundTunneblickTraffic is true");
-				}
-			} else {
-					NSLog(@"Not checking for updates because no FeedURL has been set");
-			}
-        } else {
-            NSLog(@"Cannot check for updates because Sparkle Updater does not respond to checkForUpdatesInBackground");
-        }
-    }
-    
     TBLog(@"DB-SU", @"applicationDidFinishLaunching: 003")
     
     TBLog(@"DB-SU", @"applicationDidFinishLaunching: 004")
@@ -5690,10 +5528,6 @@ static void signal_handler(int signalNumber)
     if (  [theAnim isAnimating]  ) {
 		[self quitLog: @"uninstall: stopping icon animation." toNSLog: YES];
 		[theAnim stopAnimation];
-	}
-
-	if (  [updater respondsToSelector: @selector(setAutomaticallyChecksForUpdates:)]  ) {
-		[updater setAutomaticallyChecksForUpdates: NO];
 	}
 
     [myConfigMultiUpdater stopAllUpdateChecking];

@@ -46,22 +46,22 @@ if [ ! -d "${downloads_folder_path}" ] ; then
     exit 1
 fi
 
-for buildtool in automake autoconf libtool glibtool; do
-  if [ -L /usr/local/bin/$buildtool ]; then
-    echo "/usr/local/bin/$buildtool exists & appears to be a symlink."
-    echo "Presuming $buildtool is from a package manager & refusing to overwrite."
-    exit 1
-  fi
-done
-
-echo "INSTALLING AUTOCONF:"
-cd "${downloads_folder_path}"
-curl -OL "${autoconf_url}"
-tar xzf "${autoconf_version}.tar.gz"
-cd "${autoconf_version}"
-./configure
-make
-sudo make install
+# for buildtool in automake autoconf libtool glibtool; do
+#   if [ -L /usr/local/bin/$buildtool ]; then
+#     echo "/usr/local/bin/$buildtool exists & appears to be a symlink."
+#     echo "Presuming $buildtool is from a package manager & refusing to overwrite."
+#     exit 1
+#   fi
+# done
+# 
+# echo "INSTALLING AUTOCONF:"
+# cd "${downloads_folder_path}"
+# curl -OL "${autoconf_url}"
+# tar xzf "${autoconf_version}.tar.gz"
+# cd "${autoconf_version}"
+# ./configure
+# make
+# sudo make install
 
 # Building and installing automake requires the (just downloaded and installed) latest
 # version of autoconf, so we change the path to find that version first.
@@ -76,6 +76,7 @@ cd "${automake_version}"
 ./configure
 make
 sudo make install
+exit
 
 echo "INSTALLING LIBTOOL:"
 cd "${downloads_folder_path}"

@@ -35,7 +35,6 @@
 @class NetSocket;
 @class SplashWindowController;
 @class StatusWindowController;
-@class SUUpdater;
 @class SystemAuth;
 @class TBUIUpdater;
 @class VPNConnection;
@@ -163,8 +162,6 @@ enum StatusIconPosition {
     NSTimer                 * hookupWatchdogTimer;          // Used to check for failures to hookup to openvpn processes, and deal with unknown OpenVPN processes 
 	
     NSTimer                 * statisticsWindowTimer;        // Used to check for stale statistics that must be cleared 
-    
-    SUUpdater               * updater;                      // Sparkle Updater item used to check for updates to the program
 
     ConfigurationMultiUpdater * myConfigMultiUpdater;       // Checks for configuration updates
 	
@@ -354,7 +351,6 @@ enum StatusIconPosition {
 -(NSString *)       customRunOnConnectPath;
 -(void)             startOrStopUiUpdater;
 -(BOOL)             terminatingAtUserRequest;
--(SUUpdater *)      updater;
 -(BOOL volatile)    doingSetupOfUI;
 -(void)				setDoingSetupOfUI: (BOOL) value;
 
